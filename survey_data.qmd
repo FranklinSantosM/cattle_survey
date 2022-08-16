@@ -1,0 +1,130 @@
+---
+title: "SURVEY LIVESTOOK"
+description: |
+  Se presenta dos imagen interactivas que refieren al porcentaje de distribución pecuaria en el municipio de Entre Ríos - Cochabamba.
+
+author:
+  - name: Franklin Santos
+    url: https://franklinsantos.com
+    affiliation: Instituto Nacional de Innovación Agropecuaria y Forestal (INIAF) 
+    orcid_id: 0000-0002-7509-2910
+format: html
+---
+
+## Data Analysis
+
+```{r}
+#| warning: false
+library(tidyverse)
+library(googlesheets4)
+```
+
+```{r}
+#| warning: false
+data = read_sheet("https://docs.google.com/spreadsheets/d/1RTd05TLzWnjICRkXU_eMDJlNqdjePKfjE5XPu8K0VNg/edit?usp=sharing")
+
+
+```
+
+We are going to rename our interest variables and make a new data.
+
+```{r}
+datafs = data %>%
+  rename(sindicatos = `Sindicato/predio`,
+         investigacion = `Para mejorar su ganado, que se debería investigar?`,
+         problemas = `Qué problemas tiene en su predio familiar?`,
+         requerimiento = `Qué necesidades o soluciones requiere para la ganadería?`) %>%
+  select(sindicatos, investigacion, problemas, requerimiento)
+```
+
+Now we will clean names of `sindicatos` column
+
+```{r}
+cleandata = datafs %>%
+  mutate(sindicatos_clean = case_when(
+    str_detect(sindicatos, "S[an|AN]") ~ "San Salvador",
+    str_detect(sindicatos, "[M|m]arzo") ~ "23 de Marzo Ichoa",
+    str_detect(sindicatos, "[L|l]auca") ~ "Lauca Bulo Bulo",
+    str_detect(sindicatos, "[B|b]ulo") ~ "Lauca Bulo Bulo",
+    str_detect(sindicatos, "[F|f][a|á]tima") ~ "Villa Fatima",
+    str_detect(sindicatos, "[J|j]ulio") ~ "16 de Julio",
+    str_detect(sindicatos, "[A|a]manecer") ~ "Nuevo Amanecer A",
+    str_detect(sindicatos, "TUPAK") ~ "Tupak Katari",
+    str_detect(sindicatos, "septiembre") ~ "Tupak Katari",
+    str_detect(sindicatos, "Monte") ~ "Tupak Katari",
+    str_detect(sindicatos, "[A|a]bril") ~ "25 de Abril",
+               TRUE ~ as.character(sindicatos))) %>%
+  relocate(sindicatos_clean)
+  
+cleandata %>%
+  count(sindicatos_clean) %>%
+  arrange(desc(n))
+```
+
+
+Now we are going to clean last three columns, because I need to build a word cloud picture. 
+
+```{r}
+words1 = cleandata %>%
+  separate_rows(investigacion, sep = ",")
+
+
+clean_invest =  words1 %>%
+  mutate(investigacion_clean = case_when(
+    str_detect(investigacion, "Adaptabilidad") ~ "Adaptabilidad animal",
+    str_detect(investigacion, "pasturas") ~ "Mejoramiento de pastos",
+    str_detect(investigacion, "pasto") ~ "Mejoramiento de pastos",
+    str_detect(investigacion, "ración") ~ "Nutricion animal",
+    str_detect(investigacion, "Nutrición") ~ "Nutricion animal",
+               TRUE ~ as.character(investigacion))) %>%
+  relocate(investigacion_clean, .after = investigacion) %>%
+  select(sindicatos_clean, investigacion, investigacion_clean)
+
+tableword = clean_invest %>%
+  count(investigacion_clean)
+
+```
+
+```{r}
+#| warning: false
+library(highcharter)
+hchart(
+  tableword,
+  "treemap",
+  hcaes(investigacion_clean, value = n, colorValue = n),
+  borderColor = NA #delete border
+) %>%
+  hc_colorAxis(stops = color_stops())%>%
+  hc_title(text = "Para mejorar su ganado, que se debería investigar?")%>%
+  hc_colorAxis(end0nTick = FALSE)
+```
+
+
+:::{.callout-note}
+Note that there are five types of callouts, including:
+`note`, `warning`, `important`, `tip`, and `caution`.
+:::
+
+:::{.callout-tip}
+## Tip With Caption
+
+This is an example of a callout with a caption.
+:::
+
+:::{.callout-caution collapse="true"}
+## Expand To Learn About Collapse
+
+This is an example of a 'folded' caution callout that can be expanded by the user. You can use `collapse="true"` to collapse it by default or `collapse="false"` to make a collapsible callout that is expanded by default.
+:::
+
+
+
+
+
+
+
+
+
+
+
+
